@@ -1,0 +1,55 @@
+#include <util/delay.h>
+#include "usart.h"
+#include <stdint.h>
+
+int main()
+{
+	usartInit(9600);
+	int8_t mess[32] = "\r\nUnesite string: ";
+	int8_t mojString[64];
+	int8_t duzina;
+	uint8_t flag;
+
+	while(1)
+	{
+		usartPutString(mess);
+		_delay_ms(1000);
+
+		while(usartAvailable() == 0);
+		_delay_ms(100);
+		flag = 0;
+		duzina = usartAvailable();
+		usartGetString(mojString);
+
+		//sva slova unetog stringa cemo postaviti na velika kako bi nam bilo lakse da ih poredimo
+		for(uint8_t i = 0; i < duzina; i++)
+		{
+			if(mojString[i] >= 'a' && mojString[i] <= 'z')
+				mojString[i] -= 32;
+		}
+
+		 uint8_t slova[26] = {0}; // Niz za praćenje pojavljivanja svakog slova
+		 for(uint8_t i = 0; i < duzina; i++)
+		 {
+		      if(mojString[i] >= 'A' && mojString[i] <= 'Z')
+		              slova[mojString[i] - 'A'] = 1; // Postavi odgovarajući indeks u nizu slova na 1  
+					  //ako je mojString[i] slovo C-> ono je u ascii 67, a A je 65 --> C ce zauzeti mesto 2 (slova[2] = 1) -> A je na 0, B je na 1. ,a C na 2. i sve tako
+		 }
+
+		 // Provera da li su sva slova prisutna
+		 for(uint8_t i = 0; i < 26; i++)
+		 {
+		    if(slova[i] == 0)
+		     {
+		         flag = 1;
+		         break;
+		      }
+		  }
+
+		 if(flag != 0)
+		     usartPutString(" Uneti string nije pangram \r\n");
+		 else
+		     usartPutString(" Uneti string je pangram \r\n");
+	}
+
+}

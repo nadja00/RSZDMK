@@ -1,0 +1,37 @@
+#include <util/delay.h>
+#include "usart.h"
+#include <stdint.h>
+
+int main()
+{
+	usartInit(9600);
+	int8_t uvod[32] = "\r\n Unesite rec: ";
+	int8_t rec[32];
+	int8_t obavestenje[32];
+	uint8_t brojac;
+
+	while(1)
+	{
+		usartPutString(uvod);
+		_delay_ms(1000);
+		brojac = 0;
+		while(usartAvailable() == 0);
+		_delay_ms(100);
+
+		uint8_t duzina = usartAvailable();
+		usartGetString(rec);
+
+		for(uint8_t i = 0; i < duzina; i++)
+		{
+			if(rec[i] == 'a' || rec[i] == 'e' || rec[i] == 'i' || rec[i] == 'o' || rec[i] == 'u')
+					brojac++;
+		}
+
+		int8_t brojacString[3];
+		itoa(brojac,brojacString,10);
+		usartPutString("\r\n Rec ima ");
+		usartPutString(brojacString);
+		usartPutString(" samoglasnika");
+	}
+}
+

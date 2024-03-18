@@ -1,0 +1,38 @@
+#include <util/delay.h>
+#include "usart.h"
+#include <stdint.h>
+
+int main()
+{
+	usartInit(9600);
+	int8_t mess[32] = "\r\nUnesite string: ";
+	int8_t mojString[64];
+	int8_t duzina;
+	uint8_t flag;
+
+	while(1)
+	{
+		usartPutString(mess);
+		_delay_ms(1000);
+
+		while(usartAvailable() == 0);
+		_delay_ms(100);
+		flag = 0;
+		duzina = usartAvailable();
+		usartGetString(mojString);
+
+		for(int8_t i = 0; i < duzina/2 ; i++)
+		{
+			if(mojString[i] != mojString[duzina - 1 - i])
+			{
+				flag = 1;
+			}
+		}
+
+		if(flag == 1)
+			usartPutString("\r\n String nije palindrom");
+		else
+			usartPutString("\r\n String je palindrom");
+	}
+
+}
