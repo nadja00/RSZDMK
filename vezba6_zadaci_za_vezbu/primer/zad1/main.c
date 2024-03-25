@@ -1,0 +1,123 @@
+#include <avr/io.h>
+#include <stdint.h>
+#include "usart.h"
+#include "keypad.h"
+
+
+uint8_t rows[4] = {11, 10, 9, 8};
+uint8_t cols[4] = {7, 6, 5, 4};
+
+int8_t isDigit(int8_t br)
+{
+	int8_t flag = 0;
+
+	if(br >= '0' && br <= '9')
+		flag = 1;
+
+	return flag;
+}
+
+int8_t isLetter(int8_t br)
+{
+	int8_t flag = 0;
+
+	if(br == 'A' || br == 'B' || br == 'C' || br == 'D')
+			flag = 1;
+
+	return flag;
+}
+
+int16_t izracunaj(int16_t br1, int8_t znak, int16_t br2)
+{
+	int16_t rezultat = 0, zn;
+	int8_t br1Str[5], br2Str[5], rezStr[5];
+	if(znak == 'A')
+	{
+		rezultat = br1 + br2;
+		zn = '+';
+	}
+	else if(znak == 'B')
+	{
+			rezultat = br1 - br2;
+			zn = '-';
+	}
+	else if(znak == 'C')
+	{
+			rezultat = br1 * br2;
+			zn = '*';
+	}
+	else if(znak == 'D')
+	{
+			rezultat = br1 / br2;
+			zn = '/';
+	}
+
+	itoa(br1,br1Str,10);
+	itoa(br2,br2Str,10);
+	itoa(rezultat,rezStr,10);
+
+	usartPutString("\r\n");
+	usartPutString(br1Str);
+	usartPutChar(zn);
+	usartPutString(br2Str);
+	usartPutChar('=');
+	usartPutString(rezStr);
+	usartPutString("\r\n");
+
+}
+
+int16_t main()
+{
+
+	usartInit(9600);
+	keypadInit(rows, cols);
+
+	int8_t button;
+	int8_t dozvola = 1;
+	int16_t broj1 = 0, broj2 = 0;
+	int8_t brojac = 0;
+	 int8_t znak;
+
+	while(1)
+	{
+		button = keypadScan();
+
+		if(button != 0 && dozvola == 1)
+		{
+			usartPutChar(button);
+			if(isDigit(button))
+			{
+				if(brojac == 0)
+				{
+					broj1 = broj1*10 + (button - '0');
+				}
+				else if(brojac == 1)
+				{
+					broj2 = broj2*10 + (button - '0');
+				}
+
+			}
+			else if(isLetter(button))
+			{
+				znak = button;
+				brojac = 1;
+
+			}
+			else if(button == '*')
+			{
+				izracunaj(broj1, znak, broj2);
+				usartPutString("\r\n");
+				brojac = 0;
+				broj1 = 0;
+				broj2 = 0;
+			}
+
+			dozvola = 0;
+		}
+		else if(!button)
+			dozvola = 1;
+	}
+
+
+}
+

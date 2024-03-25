@@ -1,0 +1,59 @@
+#include <avr/io.h>
+#include <stdint.h>
+#include "usart.h"
+#include "keypad.h"
+
+int8_t isDigit(int8_t br)
+{
+	if(br >= '0' && br <= '9')
+		return 1;
+	else
+		return 0;
+}
+
+uint8_t rows[4] = {11, 10, 9, 8};
+uint8_t cols[4] = {7, 6, 5, 4};
+
+int16_t main()
+{
+
+	usartInit(9600);
+	keypadInit(rows, cols);
+
+	int8_t button;
+	uint8_t dozvola = 1;
+	int16_t zbir = 0;
+	int16_t brojString[6];
+
+	while(1)
+	{
+		button = keypadScan();
+
+		if(button != 0x00 && dozvola == 1)
+		{
+			usartPutChar(button);
+
+
+			if(isDigit(button))
+			{
+				zbir = zbir*10 + (button - '0');
+
+			}
+			else if(button == '#')
+			{
+				itoa(zbir,brojString,10);
+				usartPutString("\r Uneli ste broj: ");
+				usartPutString(brojString);
+				usartPutString("\r");
+				zbir = 0;
+			}
+
+			dozvola = 0;
+		}
+		else if(!button)
+			dozvola = 1;
+
+	}
+
+
+}

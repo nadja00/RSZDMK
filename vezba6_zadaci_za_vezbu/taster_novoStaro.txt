@@ -1,0 +1,30 @@
+#include <avr/io.h>
+#include <stdint.h>
+#include "usart.h"
+#include "keypad.h"
+
+uint8_t rows[4] = {11, 10, 9, 8};
+uint8_t cols[4] = {7, 6, 5, 4};
+
+int16_t main()
+{
+	int8_t taster_novo = 0x00, taster_staro = 0x00;
+
+	usartInit(9600);
+
+	keypadInit(rows, cols);
+
+	while(1)
+	{
+		taster_novo = keypadScan();
+
+		if(taster_novo != taster_staro)
+		{
+			usartPutChar(taster_novo);
+			usartPutChar('\r');
+
+			taster_staro = taster_novo;
+		}
+	}
+
+}
