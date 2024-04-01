@@ -1,0 +1,149 @@
+#include <avr/io.h>
+#include <stdint.h>
+#include "pin.h"
+#include "timer0.h"
+#include "usart.h"
+
+int8_t checkDigit(int8_t c)
+{
+	uint8_t flag;
+
+	while(usartAvailable() == 0);
+	if(usartGetChar() == c)
+		flag = 1;
+	else
+		flag = 0;
+
+	return flag;
+}
+
+void LED_blink(uint8_t port, uint8_t pin, uint32_t perioda_treptaja, uint8_t num_of_rep)
+{
+	for(uint8_t i = 0; i < num_of_rep; i++)
+	{
+		pinSetValue(port, pin, HIGH);
+		timer0DelayMs(perioda_treptaja/2);
+		pinSetValue(port, pin, LOW);
+		timer0DelayMs(perioda_treptaja/2);
+	}
+
+}
+
+void LED_blink_inv(uint8_t port, uint8_t pin, uint32_t perioda_treptaja, uint8_t num_of_rep)
+{
+	for(uint8_t i = 0; i < num_of_rep; i++)
+	{
+		pinSetValue(port, pin, LOW);
+		timer0DelayMs(perioda_treptaja/2);
+		pinSetValue(port, pin, HIGH);
+		timer0DelayMs(perioda_treptaja/2);
+	}
+
+}
+int main()
+{
+	pinInit(PORT_B, 5, OUTPUT);
+	timer0InteruptInit();
+	usartInit(9600);
+
+	int8_t c, broj_treptaja = 1;
+	uint32_t period = 2000;
+	typedef enum state_t {LOCKED, NUM1, NUM2,NUM3, NUM4, UNLOCKED, BROKEN} state_t;
+	state_t state = LOCKED;
+
+	pinSetValue(PORT_B, 5, LOW);
+
+	while(1)
+	{
+		switch(state)
+		{
+			case LOCKED:
+				if(checkDigit('1'))
+				{
+					LED_blink(PORT_B, 5, period,broj_treptaja);
+					state = NUM1;
+				}
+				else
+				{
+					pinSetValue(PORT_B, 5, HIGH);
+					state = BROKEN;
+				}
+				break;
+
+			case NUM1:
+				if(checkDigit('2'))
+				{
+					LED_blink(PORT_B, 5, period,broj_treptaja);
+				 	state = NUM2;
+				}
+				else
+				{
+					pinSetValue(PORT_B, 5, HIGH);
+					state = BROKEN;
+				}
+				break;
+
+			case NUM2:
+				if(checkDigit('3'))
+				{
+					broj_treptaja = 3;
+					LED_blink(PORT_B, 5, period,broj_treptaja);
+					state = UNLOCKED;
+				}
+				else
+				{
+					pinSetValue(PORT_B, 5, HIGH);
+					state = BROKEN;
+				}
+				break;
+
+			case UNLOCKED:
+				break;
+
+			case BROKEN:
+				if(checkDigit('7'))
+				{
+					broj_treptaja = 1;
+					LED_blink_inv(PORT_B,5,period,broj_treptaja);
+					state = NUM3;
+				}
+				else
+				{
+					broj_treptaja = 2;
+					LED_blink_inv(PORT_B,5,period,broj_treptaja);
+					state = BROKEN;
+				}
+				break;
+			case NUM3:
+				if(checkDigit('8'))
+				{
+					broj_treptaja = 1;
+					LED_blink_inv(PORT_B,5,period,broj_treptaja);
+					state = NUM4;
+				}
+				else
+				{
+					broj_treptaja = 2;
+					LED_blink_inv(PORT_B,5,period,broj_treptaja);
+					state = BROKEN;
+				}
+				break;
+			case NUM4:
+				if(checkDigit('9'))
+				{
+					broj_treptaja = 2;
+					LED_blink_inv(PORT_B,5,period,broj_treptaja);
+					state = BROKEN;
+				}
+				else
+				{
+					pinSetValue(PORT_B, 5, LOW);
+					state = LOCKED;
+				}
+				break;
+		}
+	}
+
+
+	return 0;
+}

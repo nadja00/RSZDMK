@@ -1,0 +1,73 @@
+#include <avr/io.h>
+#include <stdint.h>
+#include "usart.h"
+#include "timer0.h"
+#define MAX_PATTERN_LENGTH 4
+
+typedef enum  State{
+    WAITING,
+    FOUND_A,
+    FOUND_AB,
+    FOUND_ABB,
+    FOUND_ABB_PATTERN
+} State;
+
+int main() {
+    usartInit(9600); 
+	timer0InteruptInit();
+	
+    uint8_t pattern[MAX_PATTERN_LENGTH] = "abba"; 
+    uint32_t inputString[50]; 
+    uint8_t matchIndex[10]; // Niz za čuvanje indeksa na kojima je pronađen šablon
+    uint8_t matchCount = 0; // Broj pronađenih šablona
+    State currentState = WAITING;
+    uint8_t inputIndex = 0; 
+
+    usartPutString("Unesite niz karaktera: ");
+    while (usartAvailable() == 0);
+	timer0DelayMs(100);
+    usartGetString(inputString);
+
+    while (inputString[inputIndex] != '\0') {
+        switch (currentState) {
+            case WAITING:
+                if (inputString[inputIndex] == 'a') {
+					inputIndex++;
+                    currentState = FOUND_A;
+                }
+				else
+				{
+					currentState = WAITING;
+				}
+                break;
+            case FOUND_A:
+                if (inputString[inputIndex] == 'b') {
+					inputIndex++;
+                    currentState = FOUND_AB;
+                } else 
+				{
+                    currentState = WAITING;
+                }
+                break;
+            case FOUND_AB:
+                if (inputString[inputIndex] == 'b') {
+					inputIndex++;
+                    currentState = FOUND_ABB;
+                } else {
+                    currentState = WAITING;
+                }
+                break;
+            case FOUND_ABB:
+                
+                break;
+            case FOUND_ABB_PATTERN:
+                
+                break;
+        }
+        
+    }
+
+    // Ispis za izlaz
+
+    return 0;
+}
