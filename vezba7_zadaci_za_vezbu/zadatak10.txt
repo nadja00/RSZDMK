@@ -1,0 +1,185 @@
+
+#include "keypad.h"
+#include "timer0.h"
+#include "pin.h"
+#include "usart.h"
+#include <avr/io.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#define DUZINA_SIFRE 3
+
+
+void LedBlink(uint8_t port, uint8_t pin, uint16_t duzina_blinka, uint8_t broj_blinka){
+
+	for(uint8_t i = 0; i < broj_blinka; i++){
+
+	pinSetValue(port,pin,HIGH);
+	timer0DelayMs(duzina_blinka/2);
+
+	pinSetValue(port,pin,LOW);
+	timer0DelayMs(duzina_blinka/2);
+
+	}
+
+}
+
+void invBlink(uint8_t port, uint8_t pin, uint16_t duzina_blinka, uint8_t broj_blinka){
+
+	for(uint8_t i = 0; i < broj_blinka; i++){
+
+		pinSetValue(port,pin,LOW);
+		timer0DelayMs(duzina_blinka/2);
+
+		pinSetValue(port,pin,HIGH);
+		timer0DelayMs(duzina_blinka/2);
+
+	}
+
+}
+
+
+int8_t isDigit(int8_t broj){
+	int8_t flag;
+
+	if(broj >= '0' && broj <= '9')
+		flag = 1;
+	else
+		flag = 0;
+	return flag;
+
+}
+
+
+uint8_t rows[4] = {11,10,9,8};
+uint8_t cols[4] = {7,6,5,4};
+
+typedef enum state_t {CLOSED, OPEN, UNLOCKED, NUM1_U, NUM2_U, LOCKED, NUM2_L, NUM1_L} state_t;
+
+
+int main(){
+	usartInit(9600);
+	keypadInit(rows,cols);
+	pinInit(PORT_B,5,OUTPUT);
+	timer0InteruptInit();
+
+	pinSetValue(PORT_B,5,LOW);
+
+	state_t state = CLOSED;
+
+	int8_t button;
+	int8_t dozvola = 1;
+	uint16_t perioda_blinka = 1000;
+	uint8_t broj_blinka = 10;
+	int8_t sifra[DUZINA_SIFRE];
+	uint8_t i = 0;
+	int16_t broj = 0;
+
+	while(1){
+		button = keypadScan();
+
+		if(button != 0 && dozvola == 1){
+			usartPutChar(button);
+			dozvola = 0;
+
+			switch(state){
+
+				case CLOSED:
+
+					if(button == 'A'){
+						broj_blinka = 1;
+						perioda_blinka = 500;
+						state = OPEN;
+						LedBlink(PORT_B,5,perioda_blinka,broj_blinka);
+
+					}else if(button == '#'){
+						state = UNLOCKED;
+						pinSetValue(PORT_B,5,HIGH);
+
+					}else{
+						state = CLOSED;
+					}
+					break;
+
+				case OPEN:
+					if(button == 'B'){
+						state = CLOSED;
+						LedBlink(PORT_B,5,perioda_blinka,2*broj_blinka);
+
+					}else{
+						state = OPEN;
+					}
+					break;
+
+				case UNLOCKED:
+					if(button == '#'){
+						state = CLOSED;
+						pinSetValue(PORT_B,5,LOW);
+
+					}else if(isDigit(button)){
+						state = NUM1_U;
+						sifra[0] = button;
+
+						invBlink(PORT_B,5,perioda_blinka,broj_blinka);
+					}else{
+						state = UNLOCKED;
+					}
+
+					break;
+
+				case NUM1_U:
+					if(isDigit(button)){
+						state = NUM2_U;
+						sifra[1] = button;
+						invBlink(PORT_B,5,perioda_blinka,broj_blinka);
+					}
+					break;
+
+				case NUM2_U:
+					if(isDigit(button)){
+						state = LOCKED;
+						sifra[2] = button;
+						pinSetValue(PORT_B,5,LOW);
+					}
+					break;
+
+				case LOCKED:
+					if(button != sifra[0]){
+						state = NUM1_L;
+						LedBlink(PORT_B,5,perioda_blinka,broj_blinka);
+
+					}else{
+						state = LOCKED;
+						LedBlink(PORT_B,5,perioda_blinka,2*broj_blinka);
+					}
+					break;
+
+				case NUM1_L:
+					if(button != sifra[1]){
+						state = NUM2_L;
+						LedBlink(PORT_B,5,perioda_blinka,broj_blinka);
+					}else{
+						LedBlink(PORT_B,5,perioda_blinka,2*broj_blinka);
+
+					}
+					break;
+
+				case NUM2_L:
+					if(button != sifra[2]){
+						pinSetValue(PORT_B,5,HIGH);
+						state = UNLOCKED;
+
+					}else{
+						state = LOCKED;
+						LedBlink(PORT_B,5,perioda_blinka,2*broj_blinka);
+					}
+
+			}
+			}else if(!button){
+				dozvola = 1;
+			}
+
+
+		}
+
+}
