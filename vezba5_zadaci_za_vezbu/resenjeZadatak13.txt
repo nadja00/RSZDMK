@@ -1,0 +1,81 @@
+#include "usart.h"
+#include <stdint.h>
+#include <util/delay.h>
+
+int main(){
+
+	usartInit(9600);
+	int8_t msg[32] = "\r\nUnesite brojni izraz: ";
+	int8_t str[16], operator_str, operand_1_str[8], operand_2_str[8], rezultat_str[16];
+	int8_t duzina, index_operatora, k, j, deljenje_nulom;
+	int8_t operand_1, operand_2, rezultat;
+
+	while(1){
+		usartPutString(msg);
+		_delay_ms(1000);
+
+		while(usartAvailable() == 0);
+		_delay_ms(1000);
+
+		duzina = usartAvailable();
+		usartGetString(str);
+
+		for(int8_t i = 0; i < duzina; i++){
+			if(str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/'){
+				operator_str = str[i];
+				index_operatora = i;
+			}
+		}
+
+		k = 0;
+		for(int8_t i = 0; i < index_operatora; i++){
+			operand_1_str[k++] = str[i];
+		}
+		operand_1_str[k] = '\0';
+
+		j = 0;
+		for(int8_t i = index_operatora + 1; i < duzina; i++){
+			operand_2_str[j++] = str[i];
+		}
+		operand_2_str[j] = '\0';
+
+		operand_1 = atoi(operand_1_str);
+		operand_2 = atoi(operand_2_str);
+
+		deljenje_nulom = 0;
+
+		switch(operator_str){
+			case '+':
+				rezultat = operand_1 + operand_2;
+				break;
+			case '-':
+				rezultat = operand_1 - operand_2;
+				break;
+			case '*':
+				rezultat = operand_1 * operand_2;
+				break;
+			case '/':
+				if(operand_2 != 0)
+					rezultat = operand_1 / operand_2;
+				else {
+					usartPutString("\r\nGreska: deljenje sa nulom!");
+					usartPutString("\r\n");
+					deljenje_nulom = 1;
+				}
+				break;
+			default:
+				rezultat = 0;
+				break;
+		}
+
+		if(!deljenje_nulom){
+			itoa(rezultat, rezultat_str, 10);
+
+			usartPutString("\r\nVrednost izraza ");
+			usartPutString(str);
+			usartPutString(" je ");
+			usartPutString(rezultat_str);
+			usartPutString("\r\n");
+		}
+	}
+}
