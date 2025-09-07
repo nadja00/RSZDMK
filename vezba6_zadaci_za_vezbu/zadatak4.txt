@@ -1,0 +1,144 @@
+#include "usart.h"
+#include "keypad.h"
+#include <stdint.h>
+#include <util/delay.h>
+#include <stdlib.h>
+#include <math.h>
+
+uint8_t rows[4] = {11, 10, 9, 8};
+uint8_t cols[4] = {7, 6, 5, 4};
+
+uint8_t isDigit(int8_t taster){
+
+	uint8_t flag;
+
+	if(taster >= '0' && taster <= '9'){
+		flag = 1;
+	}else {
+		flag = 0;
+	}
+
+	return flag;
+}
+
+void ispisi_1(int16_t a, int16_t b, int16_t c){
+
+	int8_t a_str[10];
+	int8_t b_str[10];
+	int8_t c_str[10];
+
+	itoa(a, a_str, 10);
+	itoa(b, b_str, 10);
+	itoa(c, c_str, 10);
+
+	usartPutString("\r\n");
+	usartPutString("a = ");
+	usartPutString(a_str);
+	usartPutString(" b = ");
+	usartPutString(b_str);
+	usartPutString(" c = ");
+	usartPutString(c_str);
+	usartPutString("\r\n");
+}
+
+
+void usartPutFloat(float broj) {
+    int8_t brojNiz[20];
+    dtostrf(broj, 0, 2, brojNiz);
+    usartPutString(brojNiz);
+}
+
+void izracunaj_i_ispisi(int16_t a, int16_t b, int16_t c){
+
+    float diskriminanta;
+    float x1_real, x1_imag, x2_real, x2_imag;
+
+	diskriminanta = b * b - 4 * a * c;
+
+	if(diskriminanta > 0){
+		x1_real = (-1.0)*b/(2*a) + sqrt(diskriminanta)/(2*a);
+		x2_real = (-1.0)*b/(2*a) - sqrt(diskriminanta)/(2*a);
+
+		usartPutString("\r\nx1 = ");
+		usartPutFloat(x1_real);
+		usartPutString("\r\nx2 = ");
+		usartPutFloat(x2_real);
+	}
+	else if(diskriminanta == 0){
+		x1_real = (-1.0)*b/(2*a);
+
+		usartPutString("\r\nx1 = x2 = ");
+		usartPutFloat(x1_real);
+	}
+	else { // diskriminanta < 0
+		x1_real = (-1.0)*b/(2*a);
+		x1_imag = sqrt(-diskriminanta)/(2*a);
+
+		x2_real = x1_real;
+		x2_imag = -x1_imag;
+
+		usartPutString("\r\nx1 = ");
+		usartPutFloat(x1_real);
+		usartPutString(" + ");
+		usartPutFloat(x1_imag);
+		usartPutString("i");
+
+		usartPutString("\r\nx2 = ");
+		usartPutFloat(x2_real);
+		usartPutString(" - ");
+		usartPutFloat(x1_imag);
+		usartPutString("i");
+	}
+
+	usartPutString("\r\n");
+}
+
+int16_t main(){
+
+	usartInit(9600);
+	keypadInit(rows, cols);
+
+	int8_t button;
+	uint8_t dozvola = 1;
+	int16_t zbir = 0;
+	int16_t a, b, c;
+
+	while(1){
+
+		button = keypadScan();
+
+		if(button != 0 && dozvola == 1){
+
+			usartPutChar(button);
+
+			if(isDigit(button)){
+			     zbir = zbir * 10 + (button - '0');
+			}else if(button == 'A'){
+				a = zbir;
+				zbir = 0;
+			}else if(button == 'B'){
+				b = zbir;
+				zbir = 0;
+			}else if(button == 'C'){
+				c = zbir;
+				zbir = 0;
+			}else if(button == '#'){
+				zbir = zbir * (-1);
+			}else if (button == 'D'){
+				if(a == 0){
+					usartPutString("\r\nKoeficijent a ne moze biti nula! ");
+					usartPutString("\r\n");
+				}else {
+					ispisi_1(a, b, c);
+					izracunaj_i_ispisi(a, b, c);
+				}
+			}
+
+			dozvola = 0;
+
+		}else if(!button){
+
+			dozvola = 1;
+		}
+	}
+}
